@@ -3,6 +3,7 @@ package org.jetbrains.exposed.sql
 import org.jetbrains.exposed.exceptions.throwUnsupportedException
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.vendors.H2Dialect
+import org.jetbrains.exposed.sql.vendors.SQLServerDialect
 import org.jetbrains.exposed.sql.vendors.SQLiteDialect
 import org.jetbrains.exposed.sql.vendors.currentDialect
 import org.jetbrains.exposed.sql.vendors.inProperCase
@@ -85,7 +86,8 @@ class Column<T>(
     fun descriptionDdl(modify: Boolean = false): String = buildString {
         val tr = TransactionManager.current()
         val column = this@Column
-        append(tr.identity(column))
+        val columnName = tr.identity(column)
+        append(columnName)
         append(" ")
         val isPKColumn = table.primaryKey?.columns?.contains(column) == true
         val isSQLiteAutoIncColumn = currentDialect is SQLiteDialect && columnType.isAutoInc
@@ -112,7 +114,13 @@ class Column<T>(
                 }
                 exposedLogger.error("${currentDialect.name} ${tr.db.version} doesn't support expression '$expressionSQL' as default value.$clientDefault")
             } else {
-                append(" DEFAULT $expressionSQL")
+                if (currentDialect is SQLServerDialect) {
+                    // Create a DEFAULT constraint with an explicit name to facilitate removing it later if needed
+                    val tableName = tr.identity(column.table)
+                    append(" CONSTRAINT DF_${tableName}_$columnName DEFAULT $expressionSQL")
+                } else {
+                    append(" DEFAULT $expressionSQL")
+                }
             }
         }
 
