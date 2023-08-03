@@ -23,11 +23,19 @@ import org.jetbrains.exposed.sql.tests.shared.expectException
 import org.jetbrains.exposed.sql.vendors.*
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 
 open class JodaTimeBaseTest : DatabaseTestsBase() {
     init {
+        DateTimeZone.setDefault(DateTimeZone.UTC)
+    }
+
+    @Before
+    @After
+    fun setTimeZone() {
         DateTimeZone.setDefault(DateTimeZone.UTC)
     }
 
